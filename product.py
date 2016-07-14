@@ -21,20 +21,10 @@ class Template:
 
     @fields.depends('attribute_set', 'products')
     def on_change_attribute_set(self):
-        products = []
         for product in self.products:
             if product.attribute_set != self.attribute_set:
-                changes = {
-                        'id': product.id,
-                        'attribute_set': (self.attribute_set.id
-                            if self.attribute_set else None),
-                        }
                 product.attribute_set = self.attribute_set
-                changes.update(product.on_change_attribute_set())
-                products.append(changes)
-        if products:
-            return {'products': {'update': products}}
-        return {}
+                product.on_change_attribute_set()
 
 
 class Product:
@@ -72,27 +62,24 @@ class Product:
         '_parent_template.attribute_set')
     def on_change_template(self):
         try:
-            changes = super(Product, self).on_change_template()
+            super(Product, self).on_change_template()
         except AttributeError:
-            changes = {}
+            pass
         self.attribute_set = self.on_change_with_attribute_set()
-        changes.update(self.on_change_attribute_set())
-        return changes
+        self.on_change_attribute_set()
 
     @fields.depends('attribute_set', 'template',
         '_parent_template.attribute_set')
     def on_change_attribute_set(self):
         try:
-            changes = super(Product, self).on_change_attribute_set()
+            super(Product, self).on_change_attribute_set()
         except AttributeError:
-            changes = {}
+            pass
 
-        changes.update({'attributes': {}})
-        if not self.attribute_set:
-            return changes
-        return {
-            'attributes': self.compute_attribute_values(self.attribute_set),
-            }
+        self.attributes = {}
+        if self.attribute_set:
+            self.attributes.update(
+                self.compute_attribute_values(self.attribute_set))
 
     @classmethod
     def validate(cls, records):
